@@ -73,7 +73,7 @@ public class MyBot : IChessBot
 
         var depthTimer = new List<int>();
 
-        for (var depth = 0; ; depth++)
+        for (var depth = 3; ; depth++)
         {
             if (depthTimer.Count >= 2 && depthTimer[depthTimer.Count - 2] > 0)
             {
@@ -104,7 +104,17 @@ public class MyBot : IChessBot
 
         if (node.edges == null)
         {
-            node.edges = board.GetLegalMoves().Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
+            var legalMoves = board.GetLegalMoves();
+            Array.Sort(legalMoves, (Move a, Move b) =>
+            {
+                var aVal = Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File);
+                var bVal = Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File);
+
+                return (int)(aVal - bVal);
+
+            });
+
+            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? Int32.MinValue : Int32.MaxValue))).ToList();
         }
 
         if (node.edges.Count == 0)
