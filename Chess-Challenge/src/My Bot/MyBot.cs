@@ -41,6 +41,30 @@ public class Node
     public List<Edge>? edges { get; set; }
 }
 
+public class TranspositionTable
+{
+    private Dictionary<ulong, (int, int)> table = new Dictionary<ulong, (int, int)>();
+    public int? MoveStrength(ulong zobristKey, int depth)
+    {
+        if (table.ContainsKey(zobristKey))
+        {
+            var tuple = table[zobristKey];
+
+            if (depth <= tuple.Item1)
+            {
+                return tuple.Item2;
+            }
+        }
+
+        return null;
+    }
+
+    public void LogBoard(ulong zobristKey, int depth, int score) 
+    {
+        table[zobristKey] = (depth, score);
+    }
+}
+
 public class MyBot : IChessBot
 {
     private readonly int[] _pieceValues = { 0, 100, 320, 300, 500, 900, 50000 };
@@ -52,6 +76,8 @@ public class MyBot : IChessBot
     private Node? _root;
 
     private int cutOffCounter;
+
+    private TranspositionTable tTable = new TranspositionTable();
 
     public Move Think(Board board, Timer timer)
     {
@@ -70,26 +96,31 @@ public class MyBot : IChessBot
                 _root = new Node(_isWhite ? Int32.MinValue : Int32.MaxValue);
         }
 
-        var depth = 0;
+        var depthTimer = new List<int>();
 
-
-        while (timer.MillisecondsElapsedThisTurn < 500)
+        for (var depth = 3; ; depth++)
         {
-            if (depth >= 5)
-                break;
+            if (depthTimer.Count >= 2 && depthTimer[depthTimer.Count - 2] > 0)
+            {
+                var branchingFactor = depthTimer[depthTimer.Count - 1] / depthTimer[depthTimer.Count - 2];
+                var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
+                if (nextLength > 500)
+                {
+                    ConsoleHelper.Log(depth.ToString());
+                    break;
+                }
+            }
             Search(_root, depth, Int32.MinValue, Int32.MaxValue, board);
-            depth++;
+            depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
-
-        //EvilSearch(board, _evilRoot, 4);
         var ourMove = _root.bestMove;
         _root = ourMove.node;
-        //Console.WriteLine($"Percentage {cutOffCounter / (float)Node.nodeCount}, Depth {depth - 1}");
         return ourMove.move;
     }
 
     private void Search(Node node, int depth, int alpha, int beta, Board board)
     {
+        var tableResult = this.tTable.MoveStrength(board.ZobristKey, depth);
         if (depth == 0)
         {
             node.moveStrength = EvaluatePosition(board);
@@ -97,8 +128,18 @@ public class MyBot : IChessBot
         }
 
         if (node.edges == null)
-            node.edges = board.GetLegalMoves()
-                .Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
+        {
+            var legalMoves = board.GetLegalMoves();
+            Array.Sort(legalMoves, (Move a, Move b) =>
+            {
+                var aVal = 0.5 * (Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - a.TargetSquare.Rank) + Math.Abs(4.5 - a.TargetSquare.File)) - _pieceValues[(int)a.CapturePieceType];
+                var bVal = 0.5 * (Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - b.TargetSquare.Rank) + Math.Abs(4.5 - b.TargetSquare.File)) - _pieceValues[(int)b.CapturePieceType];
+
+                return (int)(aVal - bVal);
+            });
+
+            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? Int32.MinValue : Int32.MaxValue))).ToList();
+        }
 
         if (node.edges.Count == 0)
         {
@@ -153,13 +194,14 @@ public class MyBot : IChessBot
             //    break;
         }
 
+        this.tTable.LogBoard(board.ZobristKey, depth, node.moveStrength);
         node.edges.Sort();
         //node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
     }
 
-    private int EvaluatePosition(Board board)
+    int EvaluatePosition(Board board)
     {
-        var evaluation = 0;
+        int evaluation = 0;
         if (board.IsInCheckmate())
         {
             evaluation = board.IsWhiteToMove ? -_bigNumber : _bigNumber;
@@ -245,9 +287,6 @@ public class MyBot : IChessBot
                 evaluation += pieceListValue;
             }
         }
-
-        //Random rng = new();
-        //evaluation += rng.Next(100) - 50;
 
         return evaluation;
     }
