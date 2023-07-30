@@ -107,11 +107,10 @@ public class MyBot : IChessBot
             var legalMoves = board.GetLegalMoves();
             Array.Sort(legalMoves, (Move a, Move b) =>
             {
-                var aVal = Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File);
-                var bVal = Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File);
+                var aVal = 0.5 * (Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - a.TargetSquare.Rank) + Math.Abs(4.5 - a.TargetSquare.File)) - _pieceValues[(int)a.CapturePieceType];
+                var bVal = 0.5 * (Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - b.TargetSquare.Rank) + Math.Abs(4.5 - b.TargetSquare.File)) - _pieceValues[(int)b.CapturePieceType];
 
                 return (int)(aVal - bVal);
-
             });
 
             node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? Int32.MinValue : Int32.MaxValue))).ToList();
