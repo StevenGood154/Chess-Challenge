@@ -300,12 +300,13 @@ public class MyBot : IChessBot
 
         Console.Write("Best Moves: ");
 
-        var currentNode = node;
+        var bestMove = node.bestMove;
         var i = 2;
-        while (i-- > 0)
+        while (bestMove != null)
         {
-            Console.Write(currentNode.bestMove.move.ToString().Substring(5));
-            currentNode = node.bestMove.node;
+            Console.Write(" ");
+            Console.Write(bestMove.move.ToString().Substring(7, 4));
+            bestMove = bestMove.node.bestMove;
         }
         Console.Write("\n");
     }
