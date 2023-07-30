@@ -115,6 +115,7 @@ public class MyBot : IChessBot
         }
 
         PrintBestLine(_root);
+        Console.WriteLine();
 
         var ourMove = _root.bestMove;
         _root = ourMove.node;
@@ -298,7 +299,7 @@ public class MyBot : IChessBot
     {
         Console.WriteLine($"Evaluated Strength: {node.moveStrength}");
 
-        Console.Write("Best Moves: ");
+        Console.Write("Best Line: ");
 
         var bestMove = node.bestMove;
         var i = 2;
