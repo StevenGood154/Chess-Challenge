@@ -71,19 +71,26 @@ public class MyBot : IChessBot
             }
         }
 
-        var depth = 0;
+        var depthTimer = new List<int>();
 
-        while (timer.MillisecondsElapsedThisTurn < 500)
+        for (var depth = 0; ; depth++)
         {
-            if (depth >= 5)
-                break;
+            if (depthTimer.Count >= 2 && depthTimer[depthTimer.Count - 2] > 0)
+            {
+                var branchingFactor = depthTimer[depthTimer.Count - 1] / depthTimer[depthTimer.Count - 2];
+                var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
+                if (nextLength > 500)
+                {
+                    ConsoleHelper.Log(depth.ToString());
+                    break;
+                }
+            }
             Search(_root, depth, Int32.MinValue, Int32.MaxValue, board);
-           depth++;
+            depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
-        //EvilSearch(board, _evilRoot, 4);
         var ourMove = _root.bestMove;
         _root = ourMove.node;
-        Console.WriteLine($"Percentage {(float)cutOffCounter/(float)Node.nodeCount}, Depth {depth - 1}");
+        //Console.WriteLine($"Percentage {(float)cutOffCounter/(float)Node.nodeCount}, Depth {depth - 1}");
         return ourMove.move;
     }
 
@@ -156,37 +163,6 @@ public class MyBot : IChessBot
 
         node.edges.Sort();
         //node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
-    }
-
-    void EvilSearch(Board board, Node node, int depth)
-    {
-        if (depth == 0)
-        {
-            node.moveStrength = EvaluatePosition(board);
-            return;
-        }
-
-        if (node.edges == null)
-        {
-            node.edges = board.GetLegalMoves().Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
-        }
-
-        if (node.edges.Count == 0)
-        {
-            node.moveStrength = EvaluatePosition(board);
-            return;
-        }
-
-        foreach (var edge in node.edges)
-        {
-            board.MakeMove(edge.move);
-            EvilSearch(board, edge.node, depth - 1);
-            board.UndoMove(edge.move);
-        }
-
-        node.edges.Sort();
-
-        node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
     }
 
     int EvaluatePosition(Board board)
