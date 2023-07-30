@@ -59,7 +59,7 @@ public class TranspositionTable
         return null;
     }
 
-    public void LogBoard(ulong zobristKey, int depth, int score) 
+    public void LogBoard(ulong zobristKey, int depth, int score)
     {
         table[zobristKey] = (depth, score);
     }
@@ -106,13 +106,16 @@ public class MyBot : IChessBot
                 var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
                 if (nextLength > 500)
                 {
-                    ConsoleHelper.Log(depth.ToString());
+                    Console.WriteLine($"Evaluated Depth: {depth}");
                     break;
                 }
             }
             Search(_root, depth, Int32.MinValue, Int32.MaxValue, board);
             depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
+
+        PrintBestLine(_root);
+
         var ourMove = _root.bestMove;
         _root = ourMove.node;
         return ourMove.move;
@@ -218,9 +221,9 @@ public class MyBot : IChessBot
             {
                 var listIsWhite = pieceList.IsWhitePieceList;
                 var pieceListValue = pieceList.Count * _pieceValues[(int)pieceList.TypeOfPieceInList];
-                
+
                 switch (pieceList.TypeOfPieceInList)
-                
+
                 {
                     case PieceType.Pawn:
                         foreach (var pawn in pieceList)
@@ -236,7 +239,7 @@ public class MyBot : IChessBot
                             {
                                 pieceListValue += 25;
                             }
-                        }   
+                        }
                         break;
                     case PieceType.Knight or PieceType.Queen:
                         foreach (var knight in pieceList)
@@ -277,7 +280,7 @@ public class MyBot : IChessBot
                                     pieceListValue += 40;
                                 }
                             }
-                           
+
                         }
                         break;
                 }
@@ -289,5 +292,21 @@ public class MyBot : IChessBot
         }
 
         return evaluation;
+    }
+
+    void PrintBestLine(Node node)
+    {
+        Console.WriteLine($"Evaluated Strength: {node.moveStrength}");
+
+        Console.Write("Best Moves: ");
+
+        var currentNode = node;
+        var i = 2;
+        while (i-- > 0)
+        {
+            Console.Write(currentNode.bestMove.move.ToString().Substring(5));
+            currentNode = node.bestMove.node;
+        }
+        Console.Write("\n");
     }
 }
