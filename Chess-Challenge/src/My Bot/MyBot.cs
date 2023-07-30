@@ -37,6 +37,30 @@ public class Node
     }
 }
 
+public class TranspositionTable
+{
+    private Dictionary<ulong, (int, int)> table = new Dictionary<ulong, (int, int)>();
+    public int? MoveStrength(ulong zobristKey, int depth)
+    {
+        if (table.ContainsKey(zobristKey))
+        {
+            var tuple = table[zobristKey];
+
+            if (depth <= tuple.Item1)
+            {
+                return tuple.Item2;
+            }
+        }
+
+        return null;
+    }
+
+    public void LogBoard(ulong zobristKey, int depth, int score) 
+    {
+        table[zobristKey] = (depth, score);
+    }
+}
+
 public class MyBot : IChessBot
 {
     private readonly int[] _pieceValues = { 0, 100, 320, 300, 500, 900, 50000 };
@@ -48,6 +72,8 @@ public class MyBot : IChessBot
     private int _bigNumber = Int32.MaxValue / 10;
 
     private int cutOffCounter = 0;
+
+    private TranspositionTable tTable = new TranspositionTable();
 
     public Move Think(Board board, Timer timer)
     {
@@ -96,6 +122,7 @@ public class MyBot : IChessBot
 
     void Search(Node node, int depth, int alpha, int beta, Board board)
     {
+        var tableResult = this.tTable.MoveStrength(board.ZobristKey, depth);
         if (depth == 0)
         {
             node.moveStrength = EvaluatePosition(board);
@@ -170,6 +197,7 @@ public class MyBot : IChessBot
             //    break;
         }
 
+        this.tTable.LogBoard(board.ZobristKey, depth, node.moveStrength);
         node.edges.Sort();
         //node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
     }
