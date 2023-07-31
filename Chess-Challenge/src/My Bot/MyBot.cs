@@ -64,7 +64,7 @@ public class MyBot : IChessBot
 {
     private readonly int[] _pieceValues = { 0, 100, 320, 300, 500, 900, 50000 };
 
-    private readonly int _bigNumber = Int32.MaxValue / 10;
+    private readonly int _bigNumber = 1000000000;
 
     private bool _isWhite;
 
@@ -77,7 +77,7 @@ public class MyBot : IChessBot
         if (_root == null)
         {
             _isWhite = board.IsWhiteToMove;
-            _root = new Node(_isWhite ? Int32.MinValue : Int32.MaxValue);
+            _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
         }
         else
         {
@@ -86,7 +86,7 @@ public class MyBot : IChessBot
             if (chosenEdge != null)
                 _root = chosenEdge.node;
             else
-                _root = new Node(_isWhite ? Int32.MinValue : Int32.MaxValue);
+                _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
         }
 
         var depthTimer = new List<int>();
@@ -103,7 +103,7 @@ public class MyBot : IChessBot
                         break;
                     }
             }
-            Search(_root, depth, Int32.MinValue, Int32.MaxValue, board);
+            Search(_root, depth, -_bigNumber, _bigNumber, board);
             depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
 
@@ -135,7 +135,7 @@ public class MyBot : IChessBot
                 return (int)(aVal - bVal);
             });
 
-            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? Int32.MinValue : Int32.MaxValue))).ToList();
+            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
         }
 
         if (node.edges.Count == 0)
@@ -144,7 +144,7 @@ public class MyBot : IChessBot
             return;
         }
 
-        node.moveStrength = board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+        node.moveStrength = board.IsWhiteToMove ? -_bigNumber : _bigNumber;
 
         if (!board.IsWhiteToMove) node.edges.Reverse();
 
