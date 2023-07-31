@@ -19,17 +19,14 @@ public class Edge : IComparable<Edge>
 
     public int CompareTo(Edge? other)
     {
-        return other.node.moveStrength.CompareTo(this.node.moveStrength);
+        return other.node.moveStrength.CompareTo(node.moveStrength);
     }
 }
 
 public class Node
 {
-    public static int nodeCount;
-
     public Node(int moveStrength)
     {
-        nodeCount++;
         this.moveStrength = moveStrength;
     }
 
@@ -51,9 +48,7 @@ public class TranspositionTable
             var tuple = table[zobristKey];
 
             if (depth <= tuple.Item1)
-            {
                 return tuple.Item2;
-            }
         }
 
         return null;
@@ -69,22 +64,20 @@ public class MyBot : IChessBot
 {
     private readonly int[] _pieceValues = { 0, 100, 320, 300, 500, 900, 50000 };
 
-    private readonly int _bigNumber = Int32.MaxValue / 10;
+    private readonly int _bigNumber = 1000000000;
 
     private bool _isWhite;
 
     private Node? _root;
 
-    private int cutOffCounter;
-
-    private TranspositionTable tTable = new TranspositionTable();
+    private TranspositionTable tTable = new();
 
     public Move Think(Board board, Timer timer)
     {
         if (_root == null)
         {
             _isWhite = board.IsWhiteToMove;
-            _root = new Node(_isWhite ? Int32.MinValue : Int32.MaxValue);
+            _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
         }
         else
         {
@@ -93,7 +86,7 @@ public class MyBot : IChessBot
             if (chosenEdge != null)
                 _root = chosenEdge.node;
             else
-                _root = new Node(_isWhite ? Int32.MinValue : Int32.MaxValue);
+                _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
         }
 
         var depthTimer = new List<int>();
@@ -105,16 +98,16 @@ public class MyBot : IChessBot
                 var branchingFactor = depthTimer[depthTimer.Count - 1] / depthTimer[depthTimer.Count - 2];
                 var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
                 if (nextLength > 500)
-                {
-                    Console.WriteLine($"Evaluated Depth: {depth}");
-                    break;
-                }
+                    {
+                        //Console.WriteLine($"Evaluated Depth: {depth}");
+                        break;
+                    }
             }
-            Search(_root, depth, Int32.MinValue, Int32.MaxValue, board);
+            Search(_root, depth, -_bigNumber, _bigNumber, board);
             depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
 
-        PrintBestLine(_root);
+        //PrintBestLine(_root);
         Console.WriteLine();
 
         var ourMove = _root.bestMove;
@@ -142,7 +135,7 @@ public class MyBot : IChessBot
                 return (int)(aVal - bVal);
             });
 
-            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? Int32.MinValue : Int32.MaxValue))).ToList();
+            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
         }
 
         if (node.edges.Count == 0)
@@ -151,7 +144,7 @@ public class MyBot : IChessBot
             return;
         }
 
-        node.moveStrength = board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+        node.moveStrength = board.IsWhiteToMove ? -_bigNumber : _bigNumber;
 
         if (!board.IsWhiteToMove) node.edges.Reverse();
 
@@ -172,10 +165,7 @@ public class MyBot : IChessBot
 
                 alpha = Math.Max(alpha, node.moveStrength);
                 if (node.moveStrength >= beta)
-                {
-                    cutOffCounter++;
                     break;
-                }
             }
             else
             {
@@ -188,17 +178,14 @@ public class MyBot : IChessBot
 
                 beta = Math.Min(beta, node.moveStrength);
                 if (node.moveStrength <= alpha)
-                {
-                    cutOffCounter++;
                     break;
-                }
             }
 
             //if (beta <= alpha)
             //    break;
         }
 
-        this.tTable.LogBoard(board.ZobristKey, depth, node.moveStrength);
+        tTable.LogBoard(board.ZobristKey, depth, node.moveStrength);
         node.edges.Sort();
         //node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
     }
@@ -295,20 +282,19 @@ public class MyBot : IChessBot
         return evaluation;
     }
 
-    void PrintBestLine(Node node)
-    {
-        Console.WriteLine($"Evaluated Strength: {node.moveStrength}");
+    //void PrintBestLine(Node node)
+    //{
+    //    Console.WriteLine($"Evaluated Strength: {node.moveStrength}");
 
-        Console.Write("Best Line: ");
+    //    Console.Write("Best Line: ");
 
-        var bestMove = node.bestMove;
-        var i = 2;
-        while (bestMove != null)
-        {
-            Console.Write(" ");
-            Console.Write(bestMove.move.ToString().Substring(7, 4));
-            bestMove = bestMove.node.bestMove;
-        }
-        Console.Write("\n");
-    }
+    //    var bestMove = node.bestMove;
+    //    while (bestMove != null)
+    //    {
+    //        Console.Write(" ");
+    //        Console.Write(bestMove.move.ToString().Substring(7, 4));
+    //        bestMove = bestMove.node.bestMove;
+    //    }
+    //    Console.Write("\n");
+    //}
 }
