@@ -36,28 +36,6 @@ public class Node
     public List<Edge>? edges { get; set; }
 }
 
-public class TranspositionTable
-{
-    public Dictionary<ulong, (int, int)> table = new Dictionary<ulong, (int, int)>();
-    public int? MoveStrength(ulong zobristKey, int depth)
-    {
-        if (table.ContainsKey(zobristKey))
-        {
-            var tuple = table[zobristKey];
-
-            if (depth <= tuple.Item1)
-                return tuple.Item2;
-        }
-
-        return null;
-    }
-
-    public void LogBoard(ulong zobristKey, int depth, int score)
-    {
-        table[zobristKey] = (depth, score);
-    }
-}
-
 public class MyBot : IChessBot
 {
     private readonly int[] _pieceValues = { 0, 100, 320, 300, 500, 900, 50000 };
@@ -68,7 +46,7 @@ public class MyBot : IChessBot
 
     private Node? _root;
 
-    private TranspositionTable tTable = new();
+    private Dictionary<ulong, int> transpositionTable = new Dictionary<ulong, int>();
 
     private Dictionary<int, (int, int)> depthTracker = new Dictionary<int, (int, int)>(); // #DEBUG
 
@@ -105,28 +83,30 @@ public class MyBot : IChessBot
             depthTimer.Add(timer.MillisecondsElapsedThisTurn);
         }
 
-        var d = DebugGetDepth(_root);
-        if (!depthTracker.ContainsKey(d))
-        {
-            depthTracker[d] = (1, timer.MillisecondsElapsedThisTurn);
-        }
-        else
-        {
-            depthTracker[d] = (depthTracker[d].Item1 + 1, depthTracker[d].Item2 + timer.MillisecondsElapsedThisTurn);
-        }
+        // ---------- START DEBUG -------------
+        var d = DebugGetDepth(_root);  // #DEBUG
+        if (!depthTracker.ContainsKey(d)) // #DEBUG
+        { // #DEBUG
+            depthTracker[d] = (1, timer.MillisecondsElapsedThisTurn); // #DEBUG
+        } // #DEBUG
+        else // #DEBUG
+        { // #DEBUG
+            depthTracker[d] = (depthTracker[d].Item1 + 1, depthTracker[d].Item2 + timer.MillisecondsElapsedThisTurn); // #DEBUG
+        } // #DEBUG
 
-        Console.Write(timer.MillisecondsElapsedThisTurn);
-        Console.Write(" ms"); 
-        Console.WriteLine();
-        foreach (var key in depthTracker.Keys)
-        {
-            Console.Write(key);
-            Console.Write(": ");
-            Console.Write(depthTracker[key].Item2 / depthTracker[key].Item1);
-            Console.Write(" ms / move");
-            Console.WriteLine();
-        }
-        Console.WriteLine();
+        Console.Write(timer.MillisecondsElapsedThisTurn); // #DEBUG
+        Console.Write(" ms");  // #DEBUG
+        Console.WriteLine(); // #DEBUG
+        foreach (var key in depthTracker.Keys) // #DEBUG
+        { // #DEBUG
+            Console.Write(key); // #DEBUG
+            Console.Write(": "); // #DEBUG
+            Console.Write(depthTracker[key].Item2 / depthTracker[key].Item1); // #DEBUG
+            Console.Write(" ms / move"); // #DEBUG
+            Console.WriteLine(); // #DEBUG
+        } // #DEBUG
+        Console.WriteLine(); // #DEBUG
+        // ---------- END DEBUG -------------
 
         var ourMove = _root.bestMove;
         _root = ourMove.node;
@@ -135,10 +115,18 @@ public class MyBot : IChessBot
 
     private void Search(Node node, int depth, int alpha, int beta, Board board)
     {
-        //var tableResult = tTable.MoveStrength(board.ZobristKey, depth);
+        var zobristKey = board.ZobristKey;
         if (depth == 0)
         {
-            node.moveStrength = EvaluatePosition(board);
+            if (transpositionTable.ContainsKey(zobristKey))
+            {
+                node.moveStrength = transpositionTable[zobristKey];
+                return;
+            }
+
+            var evaluation = EvaluatePosition(board);
+            node.moveStrength = evaluation;
+            transpositionTable[zobristKey] = evaluation;
             return;
         }
 
@@ -162,7 +150,9 @@ public class MyBot : IChessBot
 
         if (node.edges.Count == 0)
         {
-            node.moveStrength = EvaluatePosition(board);
+            var evaluation = EvaluatePosition(board);
+            node.moveStrength = evaluation;
+            transpositionTable[zobristKey] = evaluation;
             return;
         }
 
@@ -208,9 +198,8 @@ public class MyBot : IChessBot
             //    break;
         }
 
-        //tTable.LogBoard(board.ZobristKey, depth, node.moveStrength);
+        node.bestMove ??= node.edges.First();
         node.edges.Sort();
-        //node.moveStrength = board.IsWhiteToMove ? node.edges.First().node.moveStrength : node.edges.Last().node.moveStrength;
     }
 
     int EvaluatePosition(Board board)
@@ -290,6 +279,8 @@ public class MyBot : IChessBot
         return evaluation;
     }
 
+
+    // ---------- START DEBUG -------------
     void DebugPrintBestLine(Node node) // #DEBUG
     { // #DEBUG
         Console.WriteLine($"Evaluated Strength: {node.moveStrength}"); // #DEBUG
@@ -318,4 +309,6 @@ public class MyBot : IChessBot
 
         return depth; //#DEBUG
     } // #DEBUG
+
+    // ---------- END DEBUG -------------
 }
