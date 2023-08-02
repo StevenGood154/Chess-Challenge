@@ -138,11 +138,11 @@ public class MyBot : IChessBot
                 //var aVal = 0.5 * (Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - a.TargetSquare.Rank) + Math.Abs(4.5 - a.TargetSquare.File)) - _pieceValues[(int)a.CapturePieceType];
                 //var bVal = 0.5 * (Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - b.TargetSquare.Rank) + Math.Abs(4.5 - b.TargetSquare.File)) - _pieceValues[(int)b.CapturePieceType];
 
-                var aVal = _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType];
-                var bVal = _pieceValues[(int)b.CapturePieceType] - _pieceValues[(int)b.MovePieceType];
+                //var aVal = _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType];
+                //var bVal = _pieceValues[(int)b.CapturePieceType] - _pieceValues[(int)b.MovePieceType];
 
 
-                return (int)(aVal - bVal);
+                return _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType] - _pieceValues[(int)b.CapturePieceType] + _pieceValues[(int)b.MovePieceType];
             });
 
             node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
