@@ -234,8 +234,8 @@ public class MyBot : IChessBot
                 case PieceType.Pawn:
                     pieceValue += isWhite ? rank * rank : 49 - 2 * rank + rank * rank - 10;
 
-                    if (board.GetPiece(new Square(Math.Max(0, rank - 1), rank - 1)).IsPawn ||
-                        board.GetPiece(new Square(Math.Min(7, rank + 1), rank - 1)).IsPawn)
+                    if (board.GetPiece(new Square(Math.Max(0, file - 1), rank - 1)).IsPawn ||
+                        board.GetPiece(new Square(Math.Min(7, file + 1), rank - 1)).IsPawn)
                     {
                         pieceValue += 15;
                     }
