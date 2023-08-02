@@ -261,13 +261,13 @@ public class MyBot : IChessBot
                     var attackedFriendlyPawnOnFileBitboard = friendlyPawnBitboard & rookAttacksBitboard;
                     var attackedOpponentsPawnOnFileBitboard = opponentPawnBitboard & rookAttacksBitboard;
 
-                    if (attackedOpponentsPawnOnFileBitboard > 0)
+                    if (attackedOpponentsPawnOnFileBitboard == 0)
                     {
                         pieceValue += 50;
-                        if (attackedFriendlyPawnOnFileBitboard == 0)
-                        {
-                            pieceValue += 40;
-                        }
+                    }
+                    if (attackedFriendlyPawnOnFileBitboard == 0)
+                    {
+                        pieceValue += 20;
                     }
 
                     break;
