@@ -115,6 +115,9 @@ public class MyBot : IChessBot
         //Console.WriteLine(); // #DEBUG
         // ---------- END DEBUG -------------
 
+        Console.WriteLine($"BestMove Evaluation: {_root.moveStrength}"); // #DEBUG
+        Console.WriteLine(); // #DEBUG
+
         var ourMove = _root.bestMove;
         _root = ourMove.node;
         return ourMove.move;
