@@ -130,7 +130,7 @@ public class MyBot : IChessBot
         {
             if (transpositionTable.ContainsKey(zobristKey))
             {
-                node.moveStrength = transpositionTable[zobristKey];
+                node.moveStrength = board.IsRepeatedPosition() ? 0 : transpositionTable[zobristKey];
                 return;
             }
 
