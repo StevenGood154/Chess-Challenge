@@ -255,6 +255,8 @@ public class MyBot : IChessBot
                 case PieceType.Rook:
                     break;
                 default: // PieceType.King
+                    var earlyGameKingEval = 30 - 15 * (int)Math.Min(Distance(1, isWhite ? 0 : 7, file, rank), Distance(6, isWhite ? 0 : 7, file, rank));
+                    pieceValue += earlyGameKingEval;
                     break;
             }
             evaluation += isWhite ? pieceValue : -pieceValue;
