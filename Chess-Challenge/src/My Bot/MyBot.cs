@@ -55,9 +55,13 @@ public class MyBot : IChessBot
 
     private Dictionary<int, (int, int)> depthTracker = new Dictionary<int, (int, int)>(); // #DEBUG
 
+    private int _positionsSearched = 0; // #DEBUG
+
+    private int _tableLookups = 0; // #DEBUG
+
     public Move Think(Board board, Timer timer)
     {
-        Console.WriteLine($"Starting Evaluation: {EvaluatePosition(board)}"); // DEBUG
+        //Console.WriteLine($"Starting Evaluation: {EvaluatePosition(board)}"); // DEBUG
 
         if (_root == null)
         {
@@ -91,7 +95,7 @@ public class MyBot : IChessBot
         }
 
         // ---------- START DEBUG -------------
-        //var d = DebugGetDepth(_root);  // #DEBUG
+        var d = DebugGetDepth(_root);  // #DEBUG
         //if (!depthTracker.ContainsKey(d)) // #DEBUG
         //{ // #DEBUG
         //    depthTracker[d] = (1, timer.MillisecondsElapsedThisTurn); // #DEBUG
@@ -113,10 +117,15 @@ public class MyBot : IChessBot
         //    Console.WriteLine(); // #DEBUG
         //} // #DEBUG
         //Console.WriteLine(); // #DEBUG
-        // ---------- END DEBUG -------------
 
-        Console.WriteLine($"BestMove Evaluation: {_root.moveStrength}"); // #DEBUG
+        //Console.WriteLine($"BestMove Evaluation: {_root.moveStrength}"); // #DEBUG
+
+        Console.WriteLine($"depth: {d} in {timer.MillisecondsElapsedThisTurn}");
+        Console.WriteLine($"{_positionsSearched} positions searched"); // #DEBUG
+        Console.WriteLine($"{_tableLookups} table lookups"); // #DEBUG
         Console.WriteLine(); // #DEBUG
+
+        // ---------- END DEBUG -------------
 
         var ourMove = _root.bestMove;
         _root = ourMove.node;
@@ -128,8 +137,10 @@ public class MyBot : IChessBot
         var zobristKey = board.ZobristKey;
         if (depth == 0)
         {
+            _positionsSearched++; // #DEBUG
             if (transpositionTable.ContainsKey(zobristKey))
             {
+                _tableLookups++; // #DEBUG
                 node.moveStrength = board.IsRepeatedPosition() ? 0 : transpositionTable[zobristKey];
                 return;
             }
@@ -159,6 +170,7 @@ public class MyBot : IChessBot
 
         if (node.edges.Count == 0)
         {
+            _positionsSearched++; // #DEBUG
             var evaluation = EvaluatePosition(board);
             node.moveStrength = evaluation;
             transpositionTable[zobristKey] = evaluation;
