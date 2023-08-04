@@ -1,45 +1,10 @@
 using ChessChallenge.API;
-using Microsoft.CodeAnalysis.CSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Security;
 
 //using static ChessChallenge.Application.ConsoleHelper;
-
-public class Edge : IComparable<Edge>
-{
-    public Move move;
-    public Node node;
-
-    public Edge(Move move, Node node)
-    {
-        this.move = move;
-        this.node = node;
-    }
-
-    public int CompareTo(Edge? other)
-    {
-        return other.node.moveStrength.CompareTo(node.moveStrength);
-    }
-}
-
-public class Node
-{
-    public Node(int moveStrength)
-    {
-        this.moveStrength = moveStrength;
-    }
-
-    public Edge? bestMove { get; set; }
-
-    public int moveStrength { get; set; }
-
-    public List<Edge>? edges { get; set; }
-}
 
 public class MyBot : IChessBot
 {
@@ -47,9 +12,9 @@ public class MyBot : IChessBot
 
     private readonly int _bigNumber = 1000000000;
 
-    private bool _isWhite;
+    //private bool _isWhite;
 
-    private Node? _root;
+    private Move _bestMove = Move.NullMove;
 
     private Dictionary<ulong, int> transpositionTable = new Dictionary<ulong, int>();
 
@@ -63,39 +28,27 @@ public class MyBot : IChessBot
     {
         //Console.WriteLine($"Starting Evaluation: {EvaluatePosition(board)}"); // DEBUG
 
-        if (_root == null)
-        {
-            _isWhite = board.IsWhiteToMove;
-            _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
-        }
-        else
-        {
-            var lastMove = board.GameMoveHistory[^1];
-            var chosenEdge = _root.edges?.Where(edge => edge.move.Equals(lastMove))?.First();
-            if (chosenEdge != null)
-                _root = chosenEdge.node;
-            else
-                _root = new Node(_isWhite ? -_bigNumber : _bigNumber);
-        }
+        //var depthTimer = new List<int>();
 
-        var depthTimer = new List<int>();
+        var depth = 4;
+        Search(board, depth, -_bigNumber, _bigNumber, true);
 
-        for (var depth = 3; ; depth++)
-        {
-            if (depthTimer.Count >= 2 && depthTimer[depthTimer.Count - 2] > 0)
-            {
-                var branchingFactor = depthTimer[depthTimer.Count - 1] / depthTimer[depthTimer.Count - 2];
-                var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
-                if (nextLength > 500)
-                    break;
+        //for (var depth = 3; ; depth++)
+        //{
+        //    if (depthTimer.Count >= 2 && depthTimer[depthTimer.Count - 2] > 0)
+        //    {
+        //        var branchingFactor = depthTimer[depthTimer.Count - 1] / depthTimer[depthTimer.Count - 2];
+        //        var nextLength = 2 * depthTimer[depthTimer.Count - 1] * branchingFactor;
+        //        if (nextLength > 500)
+        //            break;
                     
-            }
-            Search(board, _root, depth, -_bigNumber, _bigNumber);
-            depthTimer.Add(timer.MillisecondsElapsedThisTurn);
-        }
+        //    }
+        //    Search(board, _root, depth, -_bigNumber, _bigNumber);
+        //    depthTimer.Add(timer.MillisecondsElapsedThisTurn);
+        //}
 
         // ---------- START DEBUG -------------
-        var d = DebugGetDepth(_root);  // #DEBUG
+        //var d = DebugGetDepth(_root);  // #DEBUG
         //if (!depthTracker.ContainsKey(d)) // #DEBUG
         //{ // #DEBUG
         //    depthTracker[d] = (1, timer.MillisecondsElapsedThisTurn); // #DEBUG
@@ -120,98 +73,81 @@ public class MyBot : IChessBot
 
         //Console.WriteLine($"BestMove Evaluation: {_root.moveStrength}"); // #DEBUG
 
-        Console.WriteLine($"depth: {d} in {timer.MillisecondsElapsedThisTurn}");
+        Console.WriteLine($"depth: {depth} in {timer.MillisecondsElapsedThisTurn}");
         Console.WriteLine($"{_positionsSearched} positions searched"); // #DEBUG
         Console.WriteLine($"{_tableLookups} table lookups"); // #DEBUG
         Console.WriteLine(); // #DEBUG
 
         // ---------- END DEBUG -------------
 
-        var ourMove = _root.bestMove;
-        _root = ourMove.node;
-        return ourMove.move;
+        //var ourMove = _root.bestMove;
+        //_root = ourMove.node;
+        //return ourMove.move;
+        return _bestMove;
     }
 
-    private void Search(Board board, Node node, int depth, int alpha, int beta)
+    private int Search(Board board, int depth, int alpha, int beta, bool isTopLevelCall = false)
     {
         var zobristKey = board.ZobristKey;
         if (depth == 0)
         {
             _positionsSearched++; // #DEBUG
-            if (transpositionTable.ContainsKey(zobristKey))
+            if (transpositionTable.ContainsKey(zobristKey)) // TODO: Use TryGetValue
             {
                 _tableLookups++; // #DEBUG
-                node.moveStrength = board.IsRepeatedPosition() ? 0 : transpositionTable[zobristKey];
-                return;
+                return board.IsRepeatedPosition() ? 0 : transpositionTable[zobristKey];
             }
 
             var evaluation = EvaluatePosition(board);
-            node.moveStrength = evaluation;
             transpositionTable[zobristKey] = evaluation;
-            return;
+            return evaluation;
         }
 
-        if (node.edges == null)
-        {
-            var legalMoves = board.GetLegalMoves();
-            Array.Sort(legalMoves, (Move a, Move b) =>
-            {
-                //var aVal = 0.5 * (Math.Abs(4.5 - a.StartSquare.Rank) + Math.Abs(4.5 - a.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - a.TargetSquare.Rank) + Math.Abs(4.5 - a.TargetSquare.File)) - _pieceValues[(int)a.CapturePieceType];
-                //var bVal = 0.5 * (Math.Abs(4.5 - b.StartSquare.Rank) + Math.Abs(4.5 - b.StartSquare.File)) + 0.5 * (Math.Abs(4.5 - b.TargetSquare.Rank) + Math.Abs(4.5 - b.TargetSquare.File)) - _pieceValues[(int)b.CapturePieceType];
+        var legalMoves = board.GetLegalMoves(); // TODO: Use GetLegalMovesNonAlloc
+        Array.Sort(legalMoves, (a, b) => _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType] - _pieceValues[(int)b.CapturePieceType] + _pieceValues[(int)b.MovePieceType]);
 
-                //var aVal = _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType];
-                //var bVal = _pieceValues[(int)b.CapturePieceType] - _pieceValues[(int)b.MovePieceType];
-
-                return _pieceValues[(int)a.CapturePieceType] - _pieceValues[(int)a.MovePieceType] - _pieceValues[(int)b.CapturePieceType] + _pieceValues[(int)b.MovePieceType];
-            });
-
-            node.edges = legalMoves.Select(move => new Edge(move, new Node(!board.IsWhiteToMove ? -_bigNumber : _bigNumber))).ToList();
-        }
-
-        if (node.edges.Count == 0)
+        if (legalMoves.Length == 0)
         {
             _positionsSearched++; // #DEBUG
             var evaluation = EvaluatePosition(board);
-            node.moveStrength = evaluation;
             transpositionTable[zobristKey] = evaluation;
-            return;
+            return evaluation;
         }
 
-        node.moveStrength = board.IsWhiteToMove ? -_bigNumber : _bigNumber;
+        var strengthOfBoardPosition = board.IsWhiteToMove ? -_bigNumber : _bigNumber;
 
-        if (!board.IsWhiteToMove) node.edges.Reverse(); // slow
+        //if (!board.IsWhiteToMove) node.edges.Reverse(); // slow
 
-        foreach (var edge in node.edges)
+        foreach (var moveUnderTest in legalMoves)
         {
-            board.MakeMove(edge.move);
-            Search(board, edge.node, depth - 1, alpha, beta);
-            board.UndoMove(edge.move);
+            board.MakeMove(moveUnderTest);
+            var strengthOfMoveUnderTest = Search(board,  depth - 1, alpha, beta);
+            board.UndoMove(moveUnderTest);
 
-            var edgeStrength = edge.node.moveStrength;
             if (board.IsWhiteToMove)
             {
                 //node.moveStrength = Math.Max(node.moveStrength, edge.node.moveStrength);
-                if (edgeStrength > node.moveStrength)
+                if (strengthOfMoveUnderTest > strengthOfBoardPosition)
                 {
-                    node.moveStrength = edgeStrength;
-                    node.bestMove = edge;
+                    strengthOfBoardPosition = strengthOfMoveUnderTest;
+                    if (isTopLevelCall) _bestMove = moveUnderTest;
                 }
 
-                alpha = Math.Max(alpha, node.moveStrength);
-                if (node.moveStrength >= beta)
+                alpha = Math.Max(alpha, strengthOfBoardPosition);
+                if (strengthOfBoardPosition >= beta)
                     break;
             }
             else
             {
                 //node.moveStrength = Math.Min(node.moveStrength, edge.node.moveStrength);
-                if (edgeStrength < node.moveStrength)
+                if (strengthOfMoveUnderTest < strengthOfBoardPosition)
                 {
-                    node.moveStrength = edgeStrength;
-                    node.bestMove = edge;
+                    strengthOfBoardPosition = strengthOfMoveUnderTest;
+                    if (isTopLevelCall) _bestMove = moveUnderTest;
                 }
 
-                beta = Math.Min(beta, node.moveStrength);
-                if (node.moveStrength <= alpha)
+                beta = Math.Min(beta, strengthOfBoardPosition);
+                if (strengthOfBoardPosition <= alpha)
                     break;
             }
 
@@ -219,8 +155,9 @@ public class MyBot : IChessBot
             //    break;
         }
 
-        node.bestMove ??= node.edges.First();
-        node.edges.Sort();
+        return strengthOfBoardPosition;
+        //node.bestMove ??= node.edges.First();
+        //node.edges.Sort();
     }
 
     int EvaluatePosition(Board board)
@@ -296,34 +233,34 @@ public class MyBot : IChessBot
         Console.WriteLine($"'Evaluate' ran {numberOfRuns} times in {(double)sw.ElapsedMilliseconds / 1000} s"); // #DEBUG
     } // #DEBUG
 
-    void DebugPrintBestLine(Node node) // #DEBUG
-    { // #DEBUG
-        Console.WriteLine($"Evaluated Strength: {node.moveStrength}"); // #DEBUG
+    //void DebugPrintBestLine(Node node) // #DEBUG
+    //{ // #DEBUG
+    //    Console.WriteLine($"Evaluated Strength: {node.moveStrength}"); // #DEBUG
   
-        Console.Write("Best Line: "); // #DEBUG
+    //    Console.Write("Best Line: "); // #DEBUG
 
-        var bestMove = node.bestMove; // #DEBUG
-        while (bestMove != null) // #DEBUG
-        { // #DEBUG
-            Console.Write(" "); // #DEBUG
-            Console.Write(bestMove.move.ToString().Substring(7, 4)); // #DEBUG
-            bestMove = bestMove.node.bestMove;// #DEBUG
-        } // #DEBUG
-        Console.Write("\n"); // #DEBUG
-    } // #DEBUG
+    //    var bestMove = node.bestMove; // #DEBUG
+    //    while (bestMove != null) // #DEBUG
+    //    { // #DEBUG
+    //        Console.Write(" "); // #DEBUG
+    //        Console.Write(bestMove.move.ToString().Substring(7, 4)); // #DEBUG
+    //        bestMove = bestMove.node.bestMove;// #DEBUG
+    //    } // #DEBUG
+    //    Console.Write("\n"); // #DEBUG
+    //} // #DEBUG
 
-    int DebugGetDepth(Node node) // #DEBUG
-    { // #DEBUG
-        var depth = 0; // #DEBUG
-        var bestMove = node.bestMove; // #DEBUG
-        while (bestMove != null) // #DEBUG
-        { // #DEBUG
-            depth++; // #DEBUG
-            bestMove = bestMove.node.bestMove;// #DEBUG
-        } // #DEBUG
+    //int DebugGetDepth(Node node) // #DEBUG
+    //{ // #DEBUG
+    //    var depth = 0; // #DEBUG
+    //    var bestMove = node.bestMove; // #DEBUG
+    //    while (bestMove != null) // #DEBUG
+    //    { // #DEBUG
+    //        depth++; // #DEBUG
+    //        bestMove = bestMove.node.bestMove;// #DEBUG
+    //    } // #DEBUG
 
-        return depth; //#DEBUG
-    } // #DEBUG
+    //    return depth; //#DEBUG
+    //} // #DEBUG
 
     // ---------- END DEBUG -------------
 }
